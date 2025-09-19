@@ -1,0 +1,32 @@
+# Handle SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Set proper MIME types for all JavaScript files
+[[headers]]
+  for = "**/*.js"
+  [headers.values]
+    Content-Type = "text/javascript"
+
+[[headers]]
+  for = "**/*.mjs"
+  [headers.values]
+    Content-Type = "text/javascript"
+
+[[headers]]
+  for = "/assets/**/*.js"
+  [headers.values]
+    Content-Type = "text/javascript"
+
+[[headers]]
+  for = "/assets/**/*.mjs"
+  [headers.values]
+    Content-Type = "text/javascript"
+
+# Set proper MIME types for CSS files
+[[headers]]
+  for = "**/*.css"
+  [headers.values]
+    Content-Type = "text/css"
