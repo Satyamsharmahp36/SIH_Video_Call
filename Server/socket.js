@@ -1,19 +1,11 @@
 function registerSocketHandlers(io) {
-    // Store active rooms and their participants
     const rooms = new Map();
 
     io.on('connection', (socket) => {
         console.log(`🔌 Client connected: ${socket.id}`);
         let currentRoomId = null;
 
-        // Acknowledge client heartbeats to keep connection alive
-        socket.on('heartbeat', () => {
-            socket.emit('heartbeat-ack');
-        });
-
-        // Join room event
         socket.on('join-room', (roomId) => {
-            // Leave any previous room
             if (currentRoomId) {
                 socket.leave(currentRoomId);
                 const prevRoom = rooms.get(currentRoomId);
@@ -23,39 +15,41 @@ function registerSocketHandlers(io) {
                 }
             }
             
-            console.log(`📥 ${socket.id} joined room ${roomId}`);
+            console.log(`📥 ${socket.id} joining room ${roomId}`);
             currentRoomId = roomId;
             socket.join(roomId);
 
-            // Initialize room if it doesn't exist
             if (!rooms.has(roomId)) {
                 rooms.set(roomId, new Set());
             }
             const room = rooms.get(roomId);
             
-            // Send the list of existing users to the new user
-            const otherUsers = Array.from(room);
-            socket.emit('all-users', otherUsers);
+            // SIMPLE LOGIC: First user = doctor, others = patients
+            const isFirstUser = room.size === 0;
+            const userRole = isFirstUser ? "doctor" : "patient";
+            
+            console.log(`👤 ${socket.id} role: ${userRole} (room had ${room.size} users)`);
 
-            // Add the new user to the room and notify others
+            // Send existing users to new user
+            const existingUsers = Array.from(room);
+            socket.emit('all-users', existingUsers);
+
+            // Add user to room
             room.add(socket.id);
+            
+            // Tell new user their role
+            socket.emit('user-role', { role: userRole, isFirst: isFirstUser });
+            
+            // Notify others about new user
             socket.to(roomId).emit('user-joined', socket.id);
 
-            console.log(`Room ${roomId} has ${room.size} participants:`, Array.from(room));
+            console.log(`Room ${roomId} has ${room.size} participants`);
         });
 
-        // WebRTC signaling
-        socket.on('signal', ({ to, from, data }) => {
-            // Ensure 'from' is the sender's socket.id for security
+        socket.on('signal', ({ to, data }) => {
             io.to(to).emit('signal', { from: socket.id, data });
         });
         
-        // Explicit leave-room event
-        socket.on('leave-room', () => {
-            handleDisconnect();
-        });
-
-        // Handle disconnection
         const handleDisconnect = () => {
             console.log(`❌ ${socket.id} disconnected`);
             if (currentRoomId) {
@@ -67,14 +61,13 @@ function registerSocketHandlers(io) {
                     if (room.size === 0) {
                         console.log(`🗑️ Deleting empty room: ${currentRoomId}`);
                         rooms.delete(currentRoomId);
-                    } else {
-                        console.log(`Room ${currentRoomId} has ${room.size} participants remaining`);
                     }
                 }
             }
         };
 
         socket.on('disconnect', handleDisconnect);
+        socket.on('leave-room', handleDisconnect);
     });
 }
 
