@@ -71,23 +71,23 @@ export default function MedicalRoom() {
     followUp: ""
   });
 
-  // Patient data
+  // Patient data - Initialize immediately for doctors
   const [patientInfo, setPatientInfo] = useState(null);
 
   // Patient database (unchanged)
   const patientDatabase = {
     "patient-sarah-123": {
-      name: "Sarah Johnson",
+      name: "Anshul Kashyap",
       age: 34,
       id: "P-2024-001",
       mrn: "MRN-789456123",
       dob: "March 15, 1990",
-      gender: "Female",
+      gender: "Male",
       phone: "(555) 123-4567",
-      email: "sarah.johnson@email.com",
+      email: "anshul.kashyap@email.com",
       address: "123 Oak Street, Springfield, IL 62701",
       emergencyContact: {
-        name: "Michael Johnson (Husband)",
+        name: "Priya Kashyap (Wife)",
         phone: "(555) 987-6543",
         relationship: "Spouse"
       },
@@ -363,11 +363,13 @@ export default function MedicalRoom() {
       setUserRole(role);
       setIsFirstUser(isFirst);
       
-      // Only doctor gets welcome message
+      // FIX: Load patient data immediately for doctors
       if (role === "doctor") {
+        const patientData = patientDatabase["patient-sarah-123"];
+        setPatientInfo(patientData);
         setChatMessages(prev => [...prev, {
           id: Date.now(),
-          text: "Hello Doctor! Medical panel is ready for patient consultations.",
+          text: `🩺 Welcome Doctor! Patient ${patientData.name} records loaded and ready for consultation.`,
           sender: "System",
           timestamp: new Date().toLocaleTimeString()
         }]);
@@ -380,13 +382,11 @@ export default function MedicalRoom() {
       setRemoteUsers(prev => [...prev, userId]);
       createPeerConnection(userId);
       
-      // If I'm doctor and someone joins, load patient data
-      if (userRole === "doctor" && !patientInfo) {
-        const patientData = patientDatabase["patient-sarah-123"];
-        setPatientInfo(patientData);
+      // Update chat when patient joins (but don't reload patient data)
+      if (isDoctor && patientInfo) {
         setChatMessages(prev => [...prev, {
           id: Date.now(),
-          text: `🩺 Patient ${patientData.name} joined. Records loaded.`,
+          text: `👤 Patient ${patientInfo.name} has joined the consultation room.`,
           sender: "System",
           timestamp: new Date().toLocaleTimeString()
         }]);
@@ -451,7 +451,7 @@ export default function MedicalRoom() {
       if (socket.connected) socket.disconnect();
       if (audioContextRef.current) audioContextRef.current.close();
     };
-  }, [roomId, navigate, createPeerConnection]); // Keep createPeerConnection in dependencies
+  }, [roomId, navigate, createPeerConnection, isDoctor]); // Keep createPeerConnection in dependencies
 
   // Medical functionality handlers
   const handleSendMessage = () => {
@@ -547,27 +547,81 @@ export default function MedicalRoom() {
   return (
     <div className="room-container">
       {/* Enhanced Header with Medical Info */}
-      <div className="room-header" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '1rem 2rem' }}>
+      <div className="room-header" style={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+        padding: '1rem 2rem',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <h2 className="room-title" style={{ color: 'white', margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>
-                 Nirmay consultation room : {roomId}
+              <h2 className="room-title" style={{ 
+                color: 'white', 
+                margin: 0, 
+                fontSize: '1.5rem', 
+                fontWeight: 'bold',
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+              }}>
+                🏥 Nirmay Consultation Room: {roomId}
               </h2>
-              <div className={`status-indicator ${connectionStatus}`}>
-                <div className={`status-dot ${connectionStatus}`} />
-                {connectionStatus === "connected" ? "Connected" : "Connecting..."}
+              <div className={`status-indicator ${connectionStatus}`} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: 'rgba(255,255,255,0.2)',
+                padding: '0.5rem 1rem',
+                borderRadius: '1rem',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <div className={`status-dot ${connectionStatus}`} style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: connectionStatus === "connected" ? '#10b981' : '#f59e0b'
+                }} />
+                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                  {connectionStatus === "connected" ? "Connected" : "Connecting..."}
+                </span>
               </div>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.5rem 1rem', borderRadius: '1rem', color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.25)', 
+                padding: '0.5rem 1rem', 
+                borderRadius: '1rem', 
+                color: 'white', 
+                fontSize: '0.875rem', 
+                fontWeight: '600',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}>
                 👥 {remoteUsers.length + 1} participants
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.5rem 1rem', borderRadius: '1rem', color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.25)', 
+                padding: '0.5rem 1rem', 
+                borderRadius: '1rem', 
+                color: 'white', 
+                fontSize: '0.875rem', 
+                fontWeight: '600',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}>
                 ⏱️ {sessionDuration}
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.5rem 1rem', borderRadius: '1rem', color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+              <div style={{ 
+                background: isDoctor 
+                  ? 'rgba(59, 130, 246, 0.3)' 
+                  : 'rgba(16, 185, 129, 0.3)', 
+                padding: '0.5rem 1rem', 
+                borderRadius: '1rem', 
+                color: 'white', 
+                fontSize: '0.875rem', 
+                fontWeight: '600',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.3)'
+              }}>
                 {isDoctor ? "👨‍⚕️ DOCTOR" : "👤 PATIENT"}
               </div>
             </div>
@@ -582,18 +636,25 @@ export default function MedicalRoom() {
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.75rem 1.5rem',
-                background: 'rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.25)',
                 border: '2px solid rgba(255,255,255,0.3)',
                 borderRadius: '1rem',
                 color: 'white',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'rgba(255,255,255,0.35)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'rgba(255,255,255,0.25)';
               }}
             >
               {showDoctorPanel ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              <span> Medical Panel</span>
+              <span>🩺 Medical Panel</span>
             </button>
           )}
         </div>
@@ -609,7 +670,9 @@ export default function MedicalRoom() {
           <div className={getVideoTileClass("local")} style={{ position: 'relative' }}>
             {!isVideoEnabled && (
               <div className="video-avatar" style={{
-                background: isDoctor ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: isDoctor 
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -635,9 +698,29 @@ export default function MedicalRoom() {
               className={getVideoClass("local")}
               style={{ display: isVideoEnabled ? "block" : "none" }}
             />
-            <div className="video-label">
-              <span className="video-name">{isDoctor ? "Dr. Smith" : "You"}</span>
-              <span className={`video-status ${isMuted ? "muted" : "active"}`}>
+            <div className="video-label" style={{
+              position: 'absolute',
+              bottom: '1rem',
+              left: '1rem',
+              background: 'rgba(0,0,0,0.7)',
+              color: 'white',
+              padding: '0.5rem 1rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <span className="video-name" style={{ fontWeight: '600' }}>
+                {isDoctor ? "Dr. Smith" : "You"}
+              </span>
+              <span className={`video-status ${isMuted ? "muted" : "active"}`} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                fontSize: '0.75rem',
+                opacity: 0.8
+              }}>
                 {isMuted ? (
                   <>
                     <MicOff size={12} /> Muted
@@ -658,12 +741,15 @@ export default function MedicalRoom() {
               gap: '0.5rem'
             }}>
               <div style={{
-                background: isDoctor ? 'rgba(59, 130, 246, 0.9)' : 'rgba(16, 185, 129, 0.9)',
+                background: isDoctor 
+                  ? 'rgba(59, 130, 246, 0.9)' 
+                  : 'rgba(16, 185, 129, 0.9)',
                 color: 'white',
                 padding: '0.5rem 1rem',
                 borderRadius: '1rem',
                 fontSize: '0.75rem',
-                fontWeight: '600'
+                fontWeight: '600',
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)'
               }}>
                 {isDoctor ? '🩺 DOCTOR' : '👤 PATIENT'}
               </div>
@@ -675,7 +761,9 @@ export default function MedicalRoom() {
             <div key={userId} className={getVideoTileClass(userId)} style={{ position: 'relative' }}>
               {remoteVideoStatus[userId] === false && (
                 <div className="video-avatar" style={{
-                  background: patientInfo ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                  background: patientInfo 
+                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                    : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -721,12 +809,30 @@ export default function MedicalRoom() {
                   display: remoteVideoStatus[userId] !== false ? "block" : "none",
                 }}
               />
-              <div className="video-label">
-                <span className="video-name">
+              <div className="video-label" style={{
+                position: 'absolute',
+                bottom: '1rem',
+                left: '1rem',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <span className="video-name" style={{ fontWeight: '600' }}>
                   {patientInfo ? patientInfo.name : `User ${userId.substring(0, 6)}`}
                 </span>
                 {activeSpeaker === userId && (
-                  <span className="video-status speaking">
+                  <span className="video-status speaking" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.75rem',
+                    color: '#10b981'
+                  }}>
                     <Mic size={12} /> Speaking
                   </span>
                 )}
@@ -746,7 +852,8 @@ export default function MedicalRoom() {
                     padding: '0.5rem 1rem',
                     borderRadius: '1rem',
                     fontSize: '0.75rem',
-                    fontWeight: '600'
+                    fontWeight: '600',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                   }}>
                     👤 PATIENT
                   </div>
@@ -767,15 +874,15 @@ export default function MedicalRoom() {
             flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
           }}>
-            {/* Medical panel content - simplified for brevity */}
+            {/* Medical panel tabs */}
             <div style={{
               display: 'flex',
               borderBottom: '2px solid #e5e7eb',
-              background: 'linear-gradient(135deg, #f3f4f6 0%, #ddd6fe 100%)'
+              background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
             }}>
               {[
                 { id: "patient", icon: User, label: "📋 Medical Records", color: "blue" },
-                { id: "chat", icon: MessageSquare, label: "🤖 AI Assistant", color: "purple" },
+                { id: "chat", icon: MessageSquare, label: "💬 Chat", color: "purple" },
                 { id: "prescription", icon: FileText, label: "💊 Prescription", color: "green" }
               ].map((tab) => (
                 <button
@@ -804,76 +911,370 @@ export default function MedicalRoom() {
               ))}
             </div>
 
-            {/* Simplified panel content */}
-            <div style={{ flex: 1, overflow: 'hidden', padding: '1.5rem' }}>
+            {/* Enhanced panel content with better styling */}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {activeTab === "patient" && patientInfo && (
-                <div>
-                  <h3>Patient: {patientInfo.name}</h3>
-                  <p>Age: {patientInfo.age}</p>
-                  <p>ID: {patientInfo.id}</p>
-                  <p>Chief Complaint: {patientInfo.chiefComplaint}</p>
+                <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+                  {/* Patient Header */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                    padding: '1.5rem',
+                    borderRadius: '1rem',
+                    marginBottom: '1.5rem',
+                    border: '2px solid #3b82f6'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                      <div style={{
+                        width: '3rem',
+                        height: '3rem',
+                        background: '#3b82f6',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.25rem',
+                        fontWeight: 'bold',
+                        color: 'white'
+                      }}>
+                        {patientInfo.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h2 style={{ margin: 0, color: '#1e40af', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                          {patientInfo.name}
+                        </h2>
+                        <p style={{ margin: 0, color: '#3730a3', fontSize: '1rem', opacity: 0.8 }}>
+                          Age {patientInfo.age} • {patientInfo.gender} • ID: {patientInfo.id}
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{
+                      background: 'white',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      color: '#374151'
+                    }}>
+                      <strong>Chief Complaint:</strong> {patientInfo.chiefComplaint}
+                    </div>
+                  </div>
+
+                  {/* Current Vitals */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                      🩺 Current Vitals
+                    </h3>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: '1rem'
+                    }}>
+                      {[
+                        { label: 'Blood Pressure', value: patientInfo.vitals.bloodPressure, icon: '💓' },
+                        { label: 'Heart Rate', value: patientInfo.vitals.heartRate, icon: '❤️' },
+                        { label: 'Temperature', value: patientInfo.vitals.temperature, icon: '🌡️' },
+                        { label: 'Oxygen Sat', value: patientInfo.vitals.oxygenSat, icon: '🫁' }
+                      ].map((vital, index) => (
+                        <div key={index} style={{
+                          background: '#f8fafc',
+                          padding: '1rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e2e8f0'
+                        }}>
+                          <div style={{ 
+                            fontSize: '0.875rem', 
+                            color: '#6b7280', 
+                            marginBottom: '0.25rem',
+                            fontWeight: '600'
+                          }}>
+                            {vital.icon} {vital.label}
+                          </div>
+                          <div style={{ 
+                            fontSize: '1.125rem', 
+                            fontWeight: 'bold', 
+                            color: '#374151' 
+                          }}>
+                            {vital.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Current Medications */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                      💊 Current Medications
+                    </h3>
+                    {patientInfo.medications.map((med, index) => (
+                      <div key={index} style={{
+                        background: '#fef3c7',
+                        padding: '1rem',
+                        borderRadius: '0.5rem',
+                        marginBottom: '0.5rem',
+                        border: '1px solid #fbbf24'
+                      }}>
+                        <div style={{ 
+                          fontWeight: 'bold', 
+                          color: '#92400e',
+                          marginBottom: '0.25rem'
+                        }}>
+                          {med.name} {med.dosage}
+                        </div>
+                        <div style={{ color: '#92400e', fontSize: '0.875rem' }}>
+                          {med.frequency} • {med.indication}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Allergies */}
+                  <div>
+                    <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                      ⚠️ Allergies
+                    </h3>
+                    {patientInfo.allergies.map((allergy, index) => (
+                      <div key={index} style={{
+                        background: '#fecaca',
+                        padding: '1rem',
+                        borderRadius: '0.5rem',
+                        marginBottom: '0.5rem',
+                        border: '2px solid #ef4444'
+                      }}>
+                        <div style={{ 
+                          fontWeight: 'bold', 
+                          color: '#dc2626',
+                          marginBottom: '0.25rem'
+                        }}>
+                          {allergy.allergen} - {allergy.severity} Risk
+                        </div>
+                        <div style={{ color: '#7f1d1d', fontSize: '0.875rem' }}>
+                          {allergy.reaction}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {activeTab === "patient" && !patientInfo && (
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <div style={{ 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '3rem',
+                  flex: 1,
+                  color: '#6b7280'
+                }}>
                   <User size={64} color="#d1d5db" />
-                  <h3>No Patient Data</h3>
-                  <p>Patient information will appear when a patient joins</p>
+                  <h3 style={{ marginTop: '1rem', marginBottom: '0.5rem', color: '#374151' }}>
+                    No Patient Data Available
+                  </h3>
+                  <p style={{ textAlign: 'center', margin: 0 }}>
+                    Patient information will appear when medical records are loaded
+                  </p>
                 </div>
               )}
 
               {activeTab === "chat" && (
-                <div>
-                  <h3>AI Medical Assistant</h3>
-                  <div style={{ height: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', padding: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div style={{ 
+                    flex: 1, 
+                    overflowY: 'auto', 
+                    padding: '1.5rem',
+                    background: '#f8fafc'
+                  }}>
                     {chatMessages.map((message) => (
-                      <div key={message.id} style={{ marginBottom: '1rem' }}>
-                        <strong>{message.sender}:</strong> {message.text}
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{message.timestamp}</div>
+                      <div key={message.id} style={{ 
+                        marginBottom: '1rem',
+                        padding: '1rem',
+                        background: message.sender === 'System' ? '#dbeafe' : 'white',
+                        borderRadius: '0.75rem',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <div style={{ 
+                          fontWeight: 'bold', 
+                          color: message.sender === 'System' ? '#1e40af' : '#374151',
+                          marginBottom: '0.5rem'
+                        }}>
+                          {message.sender}
+                        </div>
+                        <div style={{ color: '#374151', marginBottom: '0.5rem' }}>
+                          {message.text}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                          {message.timestamp}
+                        </div>
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '0.5rem', 
+                    padding: '1rem',
+                    background: 'white',
+                    borderTop: '1px solid #e2e8f0'
+                  }}>
                     <input
                       type="text"
                       placeholder="Type a message..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                      style={{ flex: 1, padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}
+                      style={{ 
+                        flex: 1, 
+                        padding: '0.75rem', 
+                        border: '2px solid #d1d5db', 
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}
                     />
                     <button
                       onClick={handleSendMessage}
-                      style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.5rem' }}
+                      style={{ 
+                        padding: '0.75rem 1.5rem', 
+                        background: '#3b82f6', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '0.5rem',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
                     >
-                      Send
+                      <Send size={16} />
                     </button>
                   </div>
                 </div>
               )}
 
               {activeTab === "prescription" && (
-                <div>
-                  <h3>Digital Prescription</h3>
+                <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+                  <h3 style={{ color: '#374151', marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                    💊 Digital Prescription
+                  </h3>
                   {patientInfo ? (
                     <div>
-                      <p>Creating prescription for {patientInfo.name}</p>
-                      <textarea
-                        placeholder="Medications..."
-                        value={prescription.medications}
-                        onChange={(e) => setPrescription(prev => ({...prev, medications: e.target.value}))}
-                        style={{ width: '100%', height: '100px', marginBottom: '1rem', padding: '0.5rem' }}
-                      />
+                      <div style={{
+                        background: '#f0f9ff',
+                        padding: '1rem',
+                        borderRadius: '0.5rem',
+                        marginBottom: '1.5rem',
+                        border: '1px solid #0ea5e9'
+                      }}>
+                        <strong style={{ color: '#0369a1' }}>Creating prescription for:</strong>
+                        <div style={{ color: '#0369a1', marginTop: '0.25rem' }}>
+                          {patientInfo.name} (Age {patientInfo.age}) • {patientInfo.id}
+                        </div>
+                      </div>
+                      
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: '0.5rem', 
+                          fontWeight: '600',
+                          color: '#374151'
+                        }}>
+                          Medications & Dosage:
+                        </label>
+                        <textarea
+                          placeholder="Enter medications, dosage, and frequency..."
+                          value={prescription.medications}
+                          onChange={(e) => setPrescription(prev => ({...prev, medications: e.target.value}))}
+                          style={{ 
+                            width: '100%', 
+                            height: '120px', 
+                            padding: '0.75rem', 
+                            border: '2px solid #d1d5db',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            resize: 'vertical'
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: '0.5rem', 
+                          fontWeight: '600',
+                          color: '#374151'
+                        }}>
+                          Instructions:
+                        </label>
+                        <textarea
+                          placeholder="Special instructions for patient..."
+                          value={prescription.instructions}
+                          onChange={(e) => setPrescription(prev => ({...prev, instructions: e.target.value}))}
+                          style={{ 
+                            width: '100%', 
+                            height: '80px', 
+                            padding: '0.75rem', 
+                            border: '2px solid #d1d5db',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            resize: 'vertical'
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: '0.5rem', 
+                          fontWeight: '600',
+                          color: '#374151'
+                        }}>
+                          Follow-up Instructions:
+                        </label>
+                        <textarea
+                          placeholder="Follow-up appointment details..."
+                          value={prescription.followUp}
+                          onChange={(e) => setPrescription(prev => ({...prev, followUp: e.target.value}))}
+                          style={{ 
+                            width: '100%', 
+                            height: '60px', 
+                            padding: '0.75rem', 
+                            border: '2px solid #d1d5db',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            resize: 'vertical'
+                          }}
+                        />
+                      </div>
+
                       <button
                         onClick={handlePrescriptionSave}
-                        style={{ padding: '0.75rem 1.5rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: '0.5rem' }}
+                        style={{ 
+                          width: '100%',
+                          padding: '1rem 1.5rem', 
+                          background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '0.75rem',
+                          fontWeight: '700',
+                          fontSize: '1rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
+                        }}
                       >
-                        Save Prescription
+                        <FileText size={20} />
+                        Save Digital Prescription
                       </button>
                     </div>
                   ) : (
-                    <p>Wait for a patient to join before creating a prescription</p>
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '3rem',
+                      color: '#6b7280'
+                    }}>
+                      <FileText size={64} color="#d1d5db" />
+                      <h4 style={{ marginTop: '1rem', color: '#374151' }}>
+                        Patient Required
+                      </h4>
+                      <p>Wait for a patient to join before creating a prescription</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -882,11 +1283,12 @@ export default function MedicalRoom() {
         )}
       </div>
 
-      {/* Controls */}
+      {/* Enhanced Controls */}
       <div className="controls-container" style={{ 
         background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
         padding: '1.5rem 2rem',
-        borderTop: '4px solid #e2e8f0' 
+        borderTop: '4px solid #e2e8f0',
+        boxShadow: '0 -4px 12px rgba(0,0,0,0.1)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
           <button
@@ -901,12 +1303,16 @@ export default function MedicalRoom() {
               fontSize: '1rem',
               border: 'none',
               cursor: 'pointer',
-              background: isMuted ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-              color: isMuted ? 'white' : '#374151'
+              transition: 'all 0.2s',
+              background: isMuted 
+                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+              color: isMuted ? 'white' : '#374151',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
             }}
           >
             {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-            {isMuted ? " Unmute" : " Mute"}
+            {isMuted ? "🔊 Unmute" : "🔇 Mute"}
           </button>
           
           <button
@@ -921,12 +1327,16 @@ export default function MedicalRoom() {
               fontSize: '1rem',
               border: 'none',
               cursor: 'pointer',
-              background: !isVideoEnabled ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-              color: !isVideoEnabled ? 'white' : '#374151'
+              transition: 'all 0.2s',
+              background: !isVideoEnabled 
+                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+              color: !isVideoEnabled ? 'white' : '#374151',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
             }}
           >
             {isVideoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
-            {isVideoEnabled ? " Stop Video" : " Start Video"}
+            {isVideoEnabled ? "📹 Stop Video" : "📷 Start Video"}
           </button>
           
           <button
@@ -941,12 +1351,14 @@ export default function MedicalRoom() {
               fontSize: '1rem',
               border: 'none',
               cursor: 'pointer',
+              transition: 'all 0.2s',
               background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              color: 'white'
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
             }}
           >
             <Phone size={20} />
-             End Consultation
+            🔚 End Consultation
           </button>
         </div>
       </div>
