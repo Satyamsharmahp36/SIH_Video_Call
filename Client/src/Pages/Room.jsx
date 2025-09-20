@@ -1312,7 +1312,7 @@ export default function MedicalRoom() {
             }}
           >
             {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-            {isMuted ? "🔊 Unmute" : "🔇 Mute"}
+            {isMuted ? " Unmute" : " Mute"}
           </button>
           
           <button
@@ -1336,7 +1336,7 @@ export default function MedicalRoom() {
             }}
           >
             {isVideoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
-            {isVideoEnabled ? "📹 Stop Video" : "📷 Start Video"}
+            {isVideoEnabled ? " Stop Video" : " Start Video"}
           </button>
           
           <button
@@ -1358,7 +1358,7 @@ export default function MedicalRoom() {
             }}
           >
             <Phone size={20} />
-            🔚 End Consultation
+             End Consultation
           </button>
         </div>
       </div>
