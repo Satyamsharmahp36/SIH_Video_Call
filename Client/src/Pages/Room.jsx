@@ -71,96 +71,10 @@ export default function MedicalRoom() {
     followUp: ""
   });
 
-  // Patient data - Initialize immediately for doctors
+  // Patient data - Initialize as null, will be fetched dynamically
   const [patientInfo, setPatientInfo] = useState(null);
-
-  // Patient database (unchanged)
-  const patientDatabase = {
-    "patient-sarah-123": {
-      name: "Anshul Kashyap",
-      age: 34,
-      id: "P-2024-001",
-      mrn: "MRN-789456123",
-      dob: "March 15, 1990",
-      gender: "Male",
-      phone: "(555) 123-4567",
-      email: "anshul.kashyap@email.com",
-      address: "123 Oak Street, Springfield, IL 62701",
-      emergencyContact: {
-        name: "Priya Kashyap (Wife)",
-        phone: "(555) 987-6543",
-        relationship: "Spouse"
-      },
-      insurance: {
-        provider: "Blue Cross Blue Shield Illinois",
-        policyNumber: "BC123456789",
-        groupNumber: "GRP001",
-        copay: "$25"
-      },
-      condition: "Hypertension Management & Type 2 Diabetes Follow-up",
-      chiefComplaint: "Follow-up for blood pressure management and diabetes monitoring. Reports occasional dizziness and increased thirst.",
-      lastVisit: "August 15, 2024",
-      nextAppointment: "October 25, 2025",
-      primaryPhysician: "Dr. Emily Smith, MD - Internal Medicine",
-      medications: [
-        {
-          name: "Lisinopril",
-          dosage: "10mg",
-          frequency: "Once daily in morning",
-          startDate: "January 15, 2024",
-          indication: "Hypertension",
-          prescriber: "Dr. Smith",
-          pharmacy: "CVS Pharmacy #3456",
-          refillsRemaining: 3,
-          lastFilled: "September 1, 2024"
-        },
-        {
-          name: "Metformin XR",
-          dosage: "500mg",
-          frequency: "Twice daily with meals",
-          startDate: "November 20, 2023",
-          indication: "Type 2 Diabetes Mellitus",
-          prescriber: "Dr. Smith",
-          pharmacy: "CVS Pharmacy #3456",
-          refillsRemaining: 5,
-          lastFilled: "September 5, 2024"
-        }
-      ],
-      allergies: [
-        {
-          allergen: "Penicillin",
-          reaction: "Severe skin rash, difficulty breathing, swelling of face and throat",
-          severity: "High",
-          dateReported: "June 10, 2015",
-          reportedBy: "Emergency Department - Springfield General",
-          notes: "Anaphylactic reaction - carries EpiPen"
-        }
-      ],
-      vitals: {
-        bloodPressure: "142/88",
-        heartRate: "76 bpm",
-        temperature: "98.7°F",
-        respiratoryRate: "18/min",
-        oxygenSat: "97%",
-        height: "5'6\" (168 cm)",
-        weight: "172 lbs (78 kg)",
-        bmi: "27.7",
-        painScale: "2/10",
-        lastUpdated: "September 20, 2025 - 2:15 PM"
-      },
-      labResults: [
-        {
-          test: "HbA1c (Hemoglobin A1C)",
-          value: "7.4%",
-          normalRange: "< 7.0% for diabetics",
-          status: "Slightly elevated",
-          date: "September 1, 2024",
-          trend: "↑ from 7.2% (June 2024)",
-          notes: "Target <7% for diabetes management"
-        }
-      ]
-    }
-  };
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Core video functionality refs
   const localVideoRef = useRef();
@@ -169,6 +83,150 @@ export default function MedicalRoom() {
   const remoteVideoRefs = useRef({});
   const audioContextRef = useRef(null);
   const analysersRef = useRef({});
+
+  // Function to deduplicate summaries by ID
+  const deduplicateSummaries = (summaries) => {
+    if (!summaries || !Array.isArray(summaries)) return [];
+    
+    const uniqueSummaries = [];
+    const seenIds = new Set();
+    
+    for (const summary of summaries) {
+      if (summary.id && !seenIds.has(summary.id)) {
+        seenIds.add(summary.id);
+        uniqueSummaries.push(summary);
+      }
+    }
+    
+    return uniqueSummaries;
+  };
+
+  // Function to fetch patient data from API
+  const fetchPatientData = async (ticketId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`https://sih-2025-fc4t.onrender.com/api/tickets/${ticketId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch patient data: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Deduplicate summaries before processing
+      const uniqueSummaries = deduplicateSummaries(data.summaries);
+      
+      // Transform API data to match our UI structure
+      const transformedPatientInfo = {
+        name: data.name || "Unknown Patient",
+        age: calculateAge(data.dateOfBirth) || "N/A",
+        id: data._id,
+        mrn: data._id,
+        phoneNumber: data.phoneNumber,
+        gender: data.gender || "Not specified",
+        
+        // Basic info from API
+        condition: "Healthcare Consultation",
+        chiefComplaint: uniqueSummaries?.[0]?.aiAnalysis?.shortSummary || "Medical consultation requested",
+        
+        // Deduplicated medical summaries from API
+        summaries: uniqueSummaries,
+        
+        // Prescriptions from API
+        prescriptions: data.prescriptions || [],
+        
+        // Default values for fields not in API
+        dob: data.dateOfBirth || "Not available",
+        email: `${data.name?.toLowerCase()?.replace(' ', '.')}@email.com` || "not.available@email.com",
+        address: "Address not available",
+        emergencyContact: {
+          name: "Not available",
+          phone: "Not available",
+          relationship: "Not specified"
+        },
+        insurance: {
+          provider: "Insurance info not available",
+          policyNumber: "N/A",
+          groupNumber: "N/A",
+          copay: "N/A"
+        },
+        lastVisit: getLastVisitDate(uniqueSummaries),
+        nextAppointment: getNextAppointmentDate(),
+        primaryPhysician: "Dr. Attending Physician",
+        
+        // Default medical data - in real app, this would come from medical records API
+        medications: [],
+        allergies: [],
+        vitals: {
+          bloodPressure: "Not recorded",
+          heartRate: "Not recorded",
+          temperature: "Not recorded",
+          respiratoryRate: "Not recorded",
+          oxygenSat: "Not recorded",
+          height: "Not recorded",
+          weight: "Not recorded",
+          bmi: "Not recorded",
+          painScale: "Not recorded",
+          lastUpdated: new Date().toLocaleString()
+        },
+        labResults: []
+      };
+      
+      setPatientInfo(transformedPatientInfo);
+      
+      // Add system message about patient data loading
+      setChatMessages(prev => [...prev, {
+        id: Date.now(),
+        text: `🩺 Patient records loaded: ${transformedPatientInfo.name} (ID: ${transformedPatientInfo.id})`,
+        sender: "System",
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+      
+    } catch (err) {
+      console.error("Error fetching patient data:", err);
+      setError(err.message);
+      setChatMessages(prev => [...prev, {
+        id: Date.now(),
+        text: `❌ Error loading patient data: ${err.message}`,
+        sender: "System",
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper functions for data transformation
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    const today = new Date();
+    const birth = new Date(dateOfBirth);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const getLastVisitDate = (summaries) => {
+    if (!summaries || summaries.length === 0) return "No previous visits";
+    return "Recent consultation available";
+  };
+
+  const getNextAppointmentDate = () => {
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return nextWeek.toLocaleDateString();
+  };
+
+  // Effect to fetch patient data when room loads and user is doctor
+  useEffect(() => {
+    if (roomId && isDoctor) {
+      fetchPatientData(roomId);
+    }
+  }, [roomId, isDoctor]);
 
   // Effect to handle window resizing
   useEffect(() => {
@@ -334,7 +392,7 @@ export default function MedicalRoom() {
     const onConnect = () => {
       console.log("Connected to server");
       setConnectionStatus("connected");
-      socket.emit("join-room", roomId); // Simple string, not object
+      socket.emit("join-room", roomId);
     };
 
     const onDisconnect = () => {
@@ -346,7 +404,6 @@ export default function MedicalRoom() {
       analysersRef.current = {};
     };
 
-    // SIMPLE: Receive existing users
     const onAllUsers = (usersList) => {
       console.log("Existing users:", usersList);
       setRemoteUsers(usersList.filter(id => id !== socket.id));
@@ -357,32 +414,21 @@ export default function MedicalRoom() {
       });
     };
 
-    // SIMPLE: Get role assignment from server
     const onUserRole = ({ role, isFirst }) => {
       console.log("My role:", role, "First user:", isFirst);
       setUserRole(role);
       setIsFirstUser(isFirst);
       
-      // FIX: Load patient data immediately for doctors
       if (role === "doctor") {
-        const patientData = patientDatabase["patient-sarah-123"];
-        setPatientInfo(patientData);
-        setChatMessages(prev => [...prev, {
-          id: Date.now(),
-          text: `🩺 Welcome Doctor! Patient ${patientData.name} records loaded and ready for consultation.`,
-          sender: "System",
-          timestamp: new Date().toLocaleTimeString()
-        }]);
+        fetchPatientData(roomId);
       }
     };
 
-    // SIMPLE: New user joined
     const onUserJoined = (userId) => {
       console.log("User joined:", userId);
       setRemoteUsers(prev => [...prev, userId]);
       createPeerConnection(userId);
       
-      // Update chat when patient joins (but don't reload patient data)
       if (isDoctor && patientInfo) {
         setChatMessages(prev => [...prev, {
           id: Date.now(),
@@ -432,7 +478,7 @@ export default function MedicalRoom() {
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("all-users", onAllUsers);
-    socket.on("user-role", onUserRole); // NEW: Listen for role assignment
+    socket.on("user-role", onUserRole);
     socket.on("user-joined", onUserJoined);
     socket.on("user-disconnected", onUserDisconnected);
     socket.on("signal", onSignal);
@@ -451,7 +497,7 @@ export default function MedicalRoom() {
       if (socket.connected) socket.disconnect();
       if (audioContextRef.current) audioContextRef.current.close();
     };
-  }, [roomId, navigate, createPeerConnection, isDoctor]); // Keep createPeerConnection in dependencies
+  }, [roomId, navigate, createPeerConnection, isDoctor]);
 
   // Medical functionality handlers
   const handleSendMessage = () => {
@@ -469,14 +515,14 @@ export default function MedicalRoom() {
 
   const handlePrescriptionSave = () => {
     if (!patientInfo) {
-      alert("Please wait for a patient to join before creating a prescription.");
+      alert("Please wait for patient data to load before creating a prescription.");
       return;
     }
     console.log("Prescription saved:", prescription);
-    alert(`✅ Digital Prescription Saved Successfully!\n\n📋 Patient: ${patientInfo.name}\n🏥 Provider: Dr. Emily Smith, MD\n📅 Date: ${new Date().toLocaleDateString()}\n🏪 Pharmacy: CVS Pharmacy #3456 - Main Street`);
+    alert(`✅ Digital Prescription Saved Successfully!\n\n📋 Patient: ${patientInfo.name}\n🏥 Provider: Dr. Attending Physician\n📅 Date: ${new Date().toLocaleDateString()}\n🏪 Pharmacy: To be specified`);
   };
 
-  // Core control handlers - individual per user
+  // Core control handlers
   const handleHangUp = () => {
     socket.disconnect();
     navigate("/");
@@ -627,7 +673,6 @@ export default function MedicalRoom() {
             </div>
           </div>
           
-          {/* Only show medical panel toggle for doctors */}
           {isDoctor && (
             <button
               onClick={() => setShowDoctorPanel(!showDoctorPanel)}
@@ -682,10 +727,10 @@ export default function MedicalRoom() {
                 {isDoctor ? <Stethoscope size={48} color="white" /> : <User size={48} color="white" />}
                 <div style={{ textAlign: 'center', color: 'white' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
-                    {isDoctor ? "Dr. Emily Smith" : "You"}
+                    {isDoctor ? "Dr. Attending" : "You"}
                   </div>
                   <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-                    {isDoctor ? "Internal Medicine" : "Patient"}
+                    {isDoctor ? "Physician" : "Patient"}
                   </div>
                 </div>
               </div>
@@ -712,7 +757,7 @@ export default function MedicalRoom() {
               gap: '0.5rem'
             }}>
               <span className="video-name" style={{ fontWeight: '600' }}>
-                {isDoctor ? "Dr. Smith" : "You"}
+                {isDoctor ? "Dr. Attending" : "You"}
               </span>
               <span className={`video-status ${isMuted ? "muted" : "active"}`} style={{
                 display: 'flex',
@@ -794,7 +839,7 @@ export default function MedicalRoom() {
                     </div>
                     {patientInfo && (
                       <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-                        Age {patientInfo.age} • {patientInfo.id}
+                        Age {patientInfo.age} • {patientInfo.id.substring(0, 8)}
                       </div>
                     )}
                   </div>
@@ -863,7 +908,7 @@ export default function MedicalRoom() {
           ))}
         </div>
 
-        {/* Medical Panel - Only visible to doctors */}
+        {/* Enhanced Medical Panel - Only visible to doctors */}
         {isDoctor && showDoctorPanel && (
           <div style={{
             flex: '1',
@@ -913,165 +958,215 @@ export default function MedicalRoom() {
 
             {/* Enhanced panel content with better styling */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {activeTab === "patient" && patientInfo && (
+              {activeTab === "patient" && (
                 <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
-                  {/* Patient Header */}
-                  <div style={{
-                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                    padding: '1.5rem',
-                    borderRadius: '1rem',
-                    marginBottom: '1.5rem',
-                    border: '2px solid #3b82f6'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                      <div style={{
-                        width: '3rem',
-                        height: '3rem',
-                        background: '#3b82f6',
+                  {loading && (
+                    <div style={{ 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '3rem',
+                      color: '#6b7280'
+                    }}>
+                      <div style={{ 
+                        width: '3rem', 
+                        height: '3rem', 
+                        border: '3px solid #e5e7eb', 
+                        borderTop: '3px solid #3b82f6',
                         borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.25rem',
-                        fontWeight: 'bold',
-                        color: 'white'
-                      }}>
-                        {patientInfo.name.charAt(0)}
-                      </div>
-                      <div>
-                        <h2 style={{ margin: 0, color: '#1e40af', fontSize: '1.5rem', fontWeight: 'bold' }}>
-                          {patientInfo.name}
-                        </h2>
-                        <p style={{ margin: 0, color: '#3730a3', fontSize: '1rem', opacity: 0.8 }}>
-                          Age {patientInfo.age} • {patientInfo.gender} • ID: {patientInfo.id}
-                        </p>
-                      </div>
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: '1rem'
+                      }} />
+                      <p>Loading patient data...</p>
                     </div>
+                  )}
+
+                  {error && !loading && (
                     <div style={{
-                      background: 'white',
+                      background: '#fecaca',
                       padding: '1rem',
                       borderRadius: '0.5rem',
-                      color: '#374151'
+                      marginBottom: '1rem',
+                      border: '2px solid #ef4444'
                     }}>
-                      <strong>Chief Complaint:</strong> {patientInfo.chiefComplaint}
+                      <div style={{ fontWeight: 'bold', color: '#dc2626', marginBottom: '0.5rem' }}>
+                        ❌ Error Loading Patient Data
+                      </div>
+                      <div style={{ color: '#7f1d1d', fontSize: '0.875rem' }}>
+                        {error}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Current Vitals */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
-                      🩺 Current Vitals
-                    </h3>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, 1fr)',
-                      gap: '1rem'
-                    }}>
-                      {[
-                        { label: 'Blood Pressure', value: patientInfo.vitals.bloodPressure, icon: '💓' },
-                        { label: 'Heart Rate', value: patientInfo.vitals.heartRate, icon: '❤️' },
-                        { label: 'Temperature', value: patientInfo.vitals.temperature, icon: '🌡️' },
-                        { label: 'Oxygen Sat', value: patientInfo.vitals.oxygenSat, icon: '🫁' }
-                      ].map((vital, index) => (
-                        <div key={index} style={{
-                          background: '#f8fafc',
+                  {patientInfo && !loading && (
+                    <>
+                      {/* Patient Header */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                        padding: '1.5rem',
+                        borderRadius: '1rem',
+                        marginBottom: '1.5rem',
+                        border: '2px solid #3b82f6'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                          <div style={{
+                            width: '3rem',
+                            height: '3rem',
+                            background: '#3b82f6',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.25rem',
+                            fontWeight: 'bold',
+                            color: 'white'
+                          }}>
+                            {patientInfo.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h2 style={{ margin: 0, color: '#1e40af', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                              {patientInfo.name}
+                            </h2>
+                            <p style={{ margin: 0, color: '#3730a3', fontSize: '1rem', opacity: 0.8 }}>
+                              Age {patientInfo.age} • {patientInfo.gender} • ID: {patientInfo.id.substring(0, 8)}...
+                            </p>
+                            <p style={{ margin: '0.25rem 0 0 0', color: '#3730a3', fontSize: '0.875rem', opacity: 0.7 }}>
+                              📞 {patientInfo.phoneNumber}
+                            </p>
+                          </div>
+                        </div>
+                        <div style={{
+                          background: 'white',
                           padding: '1rem',
                           borderRadius: '0.5rem',
-                          border: '1px solid #e2e8f0'
+                          color: '#374151'
                         }}>
-                          <div style={{ 
-                            fontSize: '0.875rem', 
-                            color: '#6b7280', 
-                            marginBottom: '0.25rem',
-                            fontWeight: '600'
-                          }}>
-                            {vital.icon} {vital.label}
-                          </div>
-                          <div style={{ 
-                            fontSize: '1.125rem', 
-                            fontWeight: 'bold', 
-                            color: '#374151' 
-                          }}>
-                            {vital.value}
-                          </div>
+                          <strong>Chief Complaint:</strong> {patientInfo.chiefComplaint}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Previous Prescriptions */}
+                      {patientInfo.prescriptions && patientInfo.prescriptions.length > 0 && (
+                        <div style={{ marginBottom: '1.5rem' }}>
+                          <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                            💊 Previous Prescriptions
+                          </h3>
+                          {patientInfo.prescriptions.map((prescription, index) => (
+                            <div key={prescription._id || index} style={{
+                              background: '#f0fdf4',
+                              padding: '1rem',
+                              borderRadius: '0.5rem',
+                              marginBottom: '1rem',
+                              border: '1px solid #16a34a'
+                            }}>
+                              <div style={{ 
+                                fontWeight: 'bold', 
+                                color: '#15803d',
+                                marginBottom: '0.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                              }}>
+                                <Pill size={16} />
+                                Prescription #{index + 1}
+                              </div>
+                              <div style={{ color: '#14532d', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                                <strong>Medication:</strong> {prescription.prescription}
+                              </div>
+                              <div style={{ color: '#14532d', fontSize: '0.875rem' }}>
+                                <strong>Prescribed by:</strong> {prescription.prescribedBy}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Consultation Summaries - Deduplicated */}
+                      {patientInfo.summaries && patientInfo.summaries.length > 0 && (
+                        <div style={{ marginBottom: '1.5rem' }}>
+                          <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                            📝 Previous Consultations ({patientInfo.summaries.length} unique)
+                          </h3>
+                          {patientInfo.summaries.map((summary, index) => (
+                            <div key={summary.id || index} style={{
+                              background: '#f0f9ff',
+                              padding: '1rem',
+                              borderRadius: '0.5rem',
+                              marginBottom: '1rem',
+                              border: '1px solid #0ea5e9'
+                            }}>
+                              <div style={{ 
+                                fontWeight: 'bold', 
+                                color: '#0369a1',
+                                marginBottom: '0.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                              }}>
+                                📋 Summary #{index + 1}
+                                <span style={{ 
+                                  fontSize: '0.75rem', 
+                                  background: '#0ea5e9', 
+                                  color: 'white', 
+                                  padding: '0.25rem 0.5rem', 
+                                  borderRadius: '0.25rem' 
+                                }}>
+                                  ID: {summary.id.substring(0, 8)}...
+                                </span>
+                              </div>
+                              <div style={{ color: '#0c4a6e', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                                <strong>Brief:</strong> {summary.aiAnalysis?.shortSummary || 'No summary available'}
+                              </div>
+                              {summary.aiAnalysis?.detailedSummary && (
+                                <div style={{ color: '#0c4a6e', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                                  <strong>Details:</strong> {summary.aiAnalysis.detailedSummary}
+                                </div>
+                              )}
+                              {summary.aiAnalysis?.language && (
+                                <div style={{ color: '#0c4a6e', fontSize: '0.75rem' }}>
+                                  Language: {summary.aiAnalysis.language}
+                                </div>
+                              )}
+                              {summary.prescription && (
+                                <div style={{ 
+                                  background: '#fef3c7',
+                                  padding: '0.5rem',
+                                  borderRadius: '0.25rem',
+                                  marginTop: '0.5rem',
+                                  fontSize: '0.875rem'
+                                }}>
+                                  <strong>💊 Prescription:</strong> {summary.prescription}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+
+                    </>
+                  )}
+
+                  {!patientInfo && !loading && !error && (
+                    <div style={{ 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '3rem',
+                      flex: 1,
+                      color: '#6b7280'
+                    }}>
+                      <User size={64} color="#d1d5db" />
+                      <h3 style={{ marginTop: '1rem', marginBottom: '0.5rem', color: '#374151' }}>
+                        No Patient Data Available
+                      </h3>
+                      <p style={{ textAlign: 'center', margin: 0 }}>
+                        Patient information will appear when medical records are loaded from the API
+                      </p>
                     </div>
-                  </div>
-
-                  {/* Current Medications */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
-                      💊 Current Medications
-                    </h3>
-                    {patientInfo.medications.map((med, index) => (
-                      <div key={index} style={{
-                        background: '#fef3c7',
-                        padding: '1rem',
-                        borderRadius: '0.5rem',
-                        marginBottom: '0.5rem',
-                        border: '1px solid #fbbf24'
-                      }}>
-                        <div style={{ 
-                          fontWeight: 'bold', 
-                          color: '#92400e',
-                          marginBottom: '0.25rem'
-                        }}>
-                          {med.name} {med.dosage}
-                        </div>
-                        <div style={{ color: '#92400e', fontSize: '0.875rem' }}>
-                          {med.frequency} • {med.indication}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Allergies */}
-                  <div>
-                    <h3 style={{ color: '#374151', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
-                      ⚠️ Allergies
-                    </h3>
-                    {patientInfo.allergies.map((allergy, index) => (
-                      <div key={index} style={{
-                        background: '#fecaca',
-                        padding: '1rem',
-                        borderRadius: '0.5rem',
-                        marginBottom: '0.5rem',
-                        border: '2px solid #ef4444'
-                      }}>
-                        <div style={{ 
-                          fontWeight: 'bold', 
-                          color: '#dc2626',
-                          marginBottom: '0.25rem'
-                        }}>
-                          {allergy.allergen} - {allergy.severity} Risk
-                        </div>
-                        <div style={{ color: '#7f1d1d', fontSize: '0.875rem' }}>
-                          {allergy.reaction}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "patient" && !patientInfo && (
-                <div style={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '3rem',
-                  flex: 1,
-                  color: '#6b7280'
-                }}>
-                  <User size={64} color="#d1d5db" />
-                  <h3 style={{ marginTop: '1rem', marginBottom: '0.5rem', color: '#374151' }}>
-                    No Patient Data Available
-                  </h3>
-                  <p style={{ textAlign: 'center', margin: 0 }}>
-                    Patient information will appear when medical records are loaded
-                  </p>
+                  )}
                 </div>
               )}
 
@@ -1162,7 +1257,10 @@ export default function MedicalRoom() {
                       }}>
                         <strong style={{ color: '#0369a1' }}>Creating prescription for:</strong>
                         <div style={{ color: '#0369a1', marginTop: '0.25rem' }}>
-                          {patientInfo.name} (Age {patientInfo.age}) • {patientInfo.id}
+                          {patientInfo.name} (Age {patientInfo.age}) • {patientInfo.id.substring(0, 8)}...
+                        </div>
+                        <div style={{ color: '#0369a1', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                          📞 {patientInfo.phoneNumber}
                         </div>
                       </div>
                       
@@ -1273,7 +1371,7 @@ export default function MedicalRoom() {
                       <h4 style={{ marginTop: '1rem', color: '#374151' }}>
                         Patient Required
                       </h4>
-                      <p>Wait for a patient to join before creating a prescription</p>
+                      <p>Wait for patient data to load before creating a prescription</p>
                     </div>
                   )}
                 </div>
