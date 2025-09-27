@@ -25,9 +25,15 @@ import {
   UserPlus,
   Users,
   Shield,
-  Stethoscope
+  Stethoscope,
+  Languages,
+  Globe
 } from "lucide-react";
 import "./Room.css";
+import { useTranslation } from "../contexts/TranslationContext";
+import LanguageSelector from "../components/LanguageSelector";
+import TranslatedChatMessage from "../components/TranslatedChatMessage";
+import TranslatedCaptions from "../components/TranslatedCaptions";
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 const socket = io(baseUrl, {
@@ -40,6 +46,19 @@ export default function MedicalRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
 
+  // Translation context
+  const { 
+    userLanguage, 
+    doctorLanguage, 
+    patientLanguage, 
+    setUserLanguage, 
+    setDoctorLanguage, 
+    setPatientLanguage,
+    autoTranslate,
+    setAutoTranslate,
+    detectPatientLanguage
+  } = useTranslation();
+
   // Core video call state - SIMPLIFIED
   const [remoteUsers, setRemoteUsers] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
@@ -48,6 +67,10 @@ export default function MedicalRoom() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeSpeaker, setActiveSpeaker] = useState(null);
   const [remoteVideoStatus, setRemoteVideoStatus] = useState({});
+
+  // Translation UI state
+  const [showLanguageSettings, setShowLanguageSettings] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(false);
 
   // Role-based state - SIMPLIFIED
   const [userRole, setUserRole] = useState("patient"); // Default to patient
@@ -500,16 +523,23 @@ export default function MedicalRoom() {
   }, [roomId, navigate, createPeerConnection, isDoctor]);
 
   // Medical functionality handlers
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (newMessage.trim()) {
       const message = {
         id: Date.now(),
         text: newMessage,
         sender: isDoctor ? "Doctor" : "Patient",
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString(),
+        originalText: newMessage
       };
       setChatMessages(prev => [...prev, message]);
       setNewMessage("");
+      
+      // Detect patient language from their messages
+      if (!isDoctor) {
+        const patientMessages = [...chatMessages, message].filter(msg => msg.sender === "Patient");
+        await detectPatientLanguage(patientMessages);
+      }
     }
   };
 
@@ -673,9 +703,10 @@ export default function MedicalRoom() {
             </div>
           </div>
           
-          {isDoctor && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* Language Settings Button */}
             <button
-              onClick={() => setShowDoctorPanel(!showDoctorPanel)}
+              onClick={() => setShowLanguageSettings(!showLanguageSettings)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -698,12 +729,196 @@ export default function MedicalRoom() {
                 e.target.style.background = 'rgba(255,255,255,0.25)';
               }}
             >
-              {showDoctorPanel ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              <span>🩺 Medical Panel</span>
+              <Languages size={16} />
+              <span>🌐 Language</span>
             </button>
-          )}
+
+            {/* Captions Toggle Button */}
+            <button
+              onClick={() => setShowCaptions(!showCaptions)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.5rem',
+                background: showCaptions ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.25)',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderRadius: '1rem',
+                color: 'white',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = showCaptions ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.35)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = showCaptions ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.25)';
+              }}
+            >
+              <MessageSquare size={16} />
+              <span>📝 Captions</span>
+            </button>
+
+            {/* Only show medical panel toggle for doctors */}
+            {isDoctor && (
+              <button
+                onClick={() => setShowDoctorPanel(!showDoctorPanel)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.5rem',
+                  background: 'rgba(255,255,255,0.25)',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderRadius: '1rem',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  backdropFilter: 'blur(10px)'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = 'rgba(255,255,255,0.35)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'rgba(255,255,255,0.25)';
+                }}
+              >
+                {showDoctorPanel ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                <span>🩺 Medical Panel</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Language Settings Panel */}
+      {showLanguageSettings && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'white',
+          borderRadius: '1rem',
+          padding: '2rem',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          zIndex: 1000,
+          minWidth: '400px',
+          maxWidth: '500px'
+        }}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h3 style={{ 
+              fontSize: '1.5rem', 
+              fontWeight: 'bold', 
+              color: '#374151',
+              marginBottom: '0.5rem'
+            }}>
+              🌐 Language Settings
+            </h3>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+              Configure language preferences for translation
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
+                Auto-translate messages
+              </label>
+              <button
+                onClick={() => setAutoTranslate(!autoTranslate)}
+                style={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  height: '1.5rem',
+                  width: '2.75rem',
+                  alignItems: 'center',
+                  borderRadius: '9999px',
+                  transition: 'background-color 0.2s',
+                  backgroundColor: autoTranslate ? '#3b82f6' : '#d1d5db'
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-block',
+                    height: '1rem',
+                    width: '1rem',
+                    borderRadius: '9999px',
+                    backgroundColor: 'white',
+                    transition: 'transform 0.2s',
+                    transform: autoTranslate ? 'translateX(1.5rem)' : 'translateX(0.125rem)'
+                  }}
+                />
+              </button>
+            </div>
+
+            <LanguageSelector
+              selectedLanguage={isDoctor ? doctorLanguage : userLanguage}
+              onLanguageChange={isDoctor ? setDoctorLanguage : setUserLanguage}
+              label={isDoctor ? "Doctor Language" : "Your Language"}
+              size="medium"
+            />
+
+            {isDoctor && (
+              <LanguageSelector
+                selectedLanguage={patientLanguage}
+                onLanguageChange={setPatientLanguage}
+                label="Patient Language (Auto-detected)"
+                size="medium"
+              />
+            )}
+
+            <div style={{ 
+              display: 'flex', 
+              gap: '1rem', 
+              marginTop: '1rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #e5e7eb'
+            }}>
+              <button
+                onClick={() => setShowLanguageSettings(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem 1.5rem',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = '#e5e7eb';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = '#f3f4f6';
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Language Settings Overlay */}
+      {showLanguageSettings && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 999
+        }} onClick={() => setShowLanguageSettings(false)} />
+      )}
 
       <div style={{ display: 'flex', height: 'calc(100vh - 140px)' }}>
         {/* Main Video Area */}
@@ -907,6 +1122,42 @@ export default function MedicalRoom() {
             </div>
           ))}
         </div>
+
+        {/* Captions Panel */}
+        {showCaptions && (
+          <div style={{
+            position: 'fixed',
+            bottom: '120px',
+            right: '20px',
+            width: '400px',
+            maxHeight: '500px',
+            zIndex: 100
+          }}>
+            <TranslatedCaptions 
+              isActive={showCaptions}
+              onToggle={setShowCaptions}
+              className="shadow-2xl"
+            />
+          </div>
+        )}
+
+        {/* Captions Panel */}
+        {showCaptions && (
+          <div style={{
+            position: 'fixed',
+            bottom: '120px',
+            right: '20px',
+            width: '400px',
+            maxHeight: '500px',
+            zIndex: 100
+          }}>
+            <TranslatedCaptions 
+              isActive={showCaptions}
+              onToggle={setShowCaptions}
+              className="shadow-2xl"
+            />
+          </div>
+        )}
 
         {/* Enhanced Medical Panel - Only visible to doctors */}
         {isDoctor && showDoctorPanel && (
@@ -1179,27 +1430,12 @@ export default function MedicalRoom() {
                     background: '#f8fafc'
                   }}>
                     {chatMessages.map((message) => (
-                      <div key={message.id} style={{ 
-                        marginBottom: '1rem',
-                        padding: '1rem',
-                        background: message.sender === 'System' ? '#dbeafe' : 'white',
-                        borderRadius: '0.75rem',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <div style={{ 
-                          fontWeight: 'bold', 
-                          color: message.sender === 'System' ? '#1e40af' : '#374151',
-                          marginBottom: '0.5rem'
-                        }}>
-                          {message.sender}
-                        </div>
-                        <div style={{ color: '#374151', marginBottom: '0.5rem' }}>
-                          {message.text}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                          {message.timestamp}
-                        </div>
-                      </div>
+                      <TranslatedChatMessage
+                        key={message.id}
+                        message={message}
+                        isDoctor={isDoctor}
+                        showTranslationControls={true}
+                      />
                     ))}
                   </div>
                   <div style={{ 
