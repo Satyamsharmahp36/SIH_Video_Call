@@ -113,7 +113,7 @@ export default function MedicalRoom() {
   const analysersRef = useRef({});
 
   // Gemini API Configuration
-  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+  const GEMINI_API_KEY = "AIzaSyDCtWQnbvdsY7JVNapc0vJxpl8UNN76iz0";
   const GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent";
 
   // Audio level detection setup - FIXED
