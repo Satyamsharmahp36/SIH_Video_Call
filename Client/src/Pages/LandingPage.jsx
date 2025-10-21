@@ -1,81 +1,78 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { nanoid } from 'nanoid';
-import { 
-  Video, 
-  Users, 
-  Shield, 
-  Stethoscope, 
-  Heart, 
-  Calendar,
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { nanoid } from "nanoid";
+import {
+  Video,
+  Shield,
+  Stethoscope,
+  Heart,
   Plus,
   LogIn,
   Link,
   Activity,
-  Bot
-} from 'lucide-react';
+  Bot,
+} from "lucide-react";
 
 export default function LandingPage() {
-  const [roomInput, setRoomInput] = useState('');
-  const [joinType, setJoinType] = useState('doctor'); // determines join target
+  const [roomInput, setRoomInput] = useState("");
+  const [joinType, setJoinType] = useState("doctor");
   const navigate = useNavigate();
 
-  // -------------------
-  // Create room handler
-  // -------------------
   const handleCreateRoom = () => {
     const newRoomId = nanoid(6);
-    if (joinType === 'ai') {
-      navigate(`/room/onlyai/${newRoomId}`);
-    } else {
-      navigate(`/room/${newRoomId}`);
-    }
+    navigate(joinType === "ai" ? `/room/onlyai/${newRoomId}` : `/room/${newRoomId}`);
   };
 
-  // -------------------
-  // Join existing room
-  // -------------------
   const handleJoinRoom = () => {
     let roomId = roomInput.trim();
-    if (roomId.includes('/room/')) {
-      const parts = roomId.split('/room/');
-      roomId = parts[1];
-    }
-
-    if (!roomId) {
-      alert('Please enter a valid Room ID or link');
-      return;
-    }
-
-    if (joinType === 'ai') {
-      navigate(`/room/onlyai/${roomId}`);
-    } else {
-      navigate(`/room/${roomId}`);
-    }
+    if (roomId.includes("/room/")) roomId = roomId.split("/room/")[1];
+    if (!roomId) return alert("Please enter a valid Room ID or link");
+    navigate(joinType === "ai" ? `/room/onlyai/${roomId}` : `/room/${roomId}`);
   };
 
-  // Features cards info
   const features = [
-    { icon: Shield, title: "Secure & HIPAA Compliant", description: "End‑to‑end encryption ensures patient privacy and data security" },
-    { icon: Video, title: "HD Video Consultations", description: "Crystal clear video quality for effective remote consultations" },
-    { icon: Activity, title: "Medical Records Integration", description: "Access patient history and vitals during consultations" },
-    { icon: Heart, title: "Digital Prescriptions", description: "Send electronic prescriptions directly to pharmacies" }
+    {
+      icon: Shield,
+      title: "End‑to‑End Security",
+      description:
+        "HIPAA-compliant encryption ensures total patient privacy and safe data exchange.",
+    },
+    {
+      icon: Video,
+      title: "Seamless Consultations",
+      description:
+        "Adaptive AI‑backed video calls deliver clear, low-latency healthcare consultations.",
+    },
+    {
+      icon: Activity,
+      title: "Smart Records System",
+      description:
+        "Digital records integrated with AI insights for continuous health tracking and diagnosis.",
+    },
+    {
+      icon: Heart,
+      title: "Prescription Automation",
+      description:
+        "Doctors can issue e‑prescriptions instantly to nearby pharmacies with availability tracking.",
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-violet-50 text-gray-900 font-inter overflow-x-hidden">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-white/60 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Stethoscope size={24} className="text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md">
+              <Stethoscope size={22} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent drop-shadow-sm">
                 Nirogya
               </h1>
-              <p className="text-xs text-gray-500 font-medium">Telemedicine Platform</p>
+              <p className="text-xs text-gray-500 font-medium">
+                Agentic AI Healthcare Platform
+              </p>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
@@ -85,146 +82,152 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Main Section */}
-      <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left - Hero */}
-          <div className="space-y-8">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
-                <Heart size={16} /> Healthcare Made Simple
-              </div>
-              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                Start Your 
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Consultation
-                </span>
-                {' '}Instantly
-              </h1>
-              <p className="text-xl text-gray-600">
-                Choose between a human doctor or our AI health assistant for secure, HIPAA‑compliant virtual consultations.
-              </p>
+      {/* Main Section with Hero & Features side by side */}
+      <main className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-[1.3fr_1fr] gap-16 items-start">
+        {/* LEFT – Hero & Room */}
+        <div className="space-y-10 max-w-lg">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 bg-blue-50/70 text-blue-700 px-4 py-2 rounded-full font-semibold text-sm border border-blue-100 shadow-sm">
+              <Heart size={16} /> Smarter Healthcare for All
             </div>
 
-            {/* Session selector */}
-            <div className="flex flex-col sm:flex-row gap-4 mt-8">
-              <button
-                onClick={() => setJoinType('doctor')}
-                className={`flex-1 px-6 py-4 rounded-2xl border-2 font-semibold transition-all ${
-                  joinType === 'doctor'
-                    ? 'border-blue-600 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-white hover:border-blue-300 text-gray-700'
-                }`}
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <Stethoscope size={28} />
-                  <span>Doctor Room</span>
-                </div>
-              </button>
+            <h1 className="text-5xl lg:text-6xl font-bold leading-[1.2] tracking-tight">
+              Empowering India through 
+              <span>  </span>
+              <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
+                Intelligent Care
+              </span>
+            </h1>
 
-              <button
-                onClick={() => setJoinType('ai')}
-                className={`flex-1 px-6 py-4 rounded-2xl border-2 font-semibold transition-all ${
-                  joinType === 'ai'
-                    ? 'border-purple-600 bg-purple-50 text-purple-700'
-                    : 'border-gray-200 bg-white hover:border-purple-300 text-gray-700'
-                }`}
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <Bot size={28} />
-                  <span>AI Room</span>
-                </div>
-              </button>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-4 mt-6">
-              <button
-                onClick={handleCreateRoom}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                <Plus size={24} />
-                Start New Consultation
-              </button>
-
-              <div className="flex items-center gap-4">
-                <div className="h-px bg-gray-300 flex-1" />
-                <span className="text-gray-500 font-medium">or</span>
-                <div className="h-px bg-gray-300 flex-1" />
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Link size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    value={roomInput}
-                    onChange={(e) => setRoomInput(e.target.value)}
-                    placeholder="Enter Room ID or Link"
-                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-2xl text-lg focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all"
-                    onKeyPress={(e) => e.key === 'Enter' && handleJoinRoom()}
-                  />
-                </div>
-                <button
-                  onClick={handleJoinRoom}
-                  className="inline-flex items-center justify-center gap-2 bg-white border-2 border-gray-200 hover:border-blue-500 text-gray-700 hover:text-blue-600 px-6 py-4 rounded-2xl text-lg font-semibold transition-all hover:bg-blue-50"
-                >
-                  <LogIn size={20} />
-                  Join {joinType === 'ai' ? 'AI' : 'Doctor'} Room
-                </button>
-              </div>
-            </div>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              Nirogya bridges rural and urban healthcare through AI‑powered consultations, 
+              low‑bandwidth access, and smart medical record management—all in one intuitive platform.
+            </p>
           </div>
 
-          {/* Right - Info Cards */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center">
-                  <Calendar size={24} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Quick Guide</h3>
-                  <p className="text-gray-600">Get Started Fast</p>
-                </div>
+          {/* Room Type Selection */}
+          <div className="flex gap-4 mt-10">
+            <button
+              onClick={() => setJoinType("doctor")}
+              className={`flex-1 px-6 py-5 rounded-2xl border-2 font-semibold transition-all transform hover:scale-[1.03] ${
+                joinType === "doctor"
+                  ? "border-blue-600 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 shadow-md"
+                  : "border-gray-200 bg-white hover:border-blue-300"
+              }`}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Stethoscope size={28} />
+                <span>Doctor Room</span>
               </div>
-              <ul className="space-y-2 text-gray-700">
-                <li>1️⃣ Select Doctor or AI session type</li>
-                <li>2️⃣ Click “Start New Consultation”</li>
-                <li>3️⃣ Share room link and start secure consultation</li>
-              </ul>
+            </button>
+
+            <button
+              onClick={() => setJoinType("ai")}
+              className={`flex-1 px-6 py-5 rounded-2xl border-2 font-semibold transition-all transform hover:scale-[1.03] ${
+                joinType === "ai"
+                  ? "border-violet-600 bg-gradient-to-br from-violet-50 to-blue-100 text-violet-700 shadow-md"
+                  : "border-gray-200 bg-white hover:border-violet-300"
+              }`}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Bot size={28} />
+                <span>AI Room</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-4 mt-10">
+            <button
+              onClick={handleCreateRoom}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold shadow-lg shadow-violet-400/30 transition-all hover:scale-105"
+            >
+              <Plus size={24} />
+              Start New Consultation
+            </button>
+
+            <div className="flex items-center gap-4">
+              <div className="h-px bg-gray-300 flex-1" />
+              <span className="text-gray-500 font-medium text-sm">or</span>
+              <div className="h-px bg-gray-300 flex-1" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {features.map((f, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition duration-300 hover:scale-105"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mb-4">
-                    <f.icon size={20} className="text-white" />
-                  </div>
-                  <h4 className="font-bold text-gray-900 mb-1">{f.title}</h4>
-                  <p className="text-sm text-gray-600">{f.description}</p>
-                </div>
-              ))}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Link
+                  size={20}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  value={roomInput}
+                  onChange={(e) => setRoomInput(e.target.value)}
+                  placeholder="Enter Room ID or Link"
+                  className="w-full pl-12 pr-4 py-4 bg-white/70 border-2 border-gray-200 rounded-2xl text-lg focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all overflow-hidden text-ellipsis"
+                  onKeyPress={(e) => e.key === "Enter" && handleJoinRoom()}
+                />
+              </div>
+
+              <button
+                onClick={handleJoinRoom}
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-50 to-violet-50 border-2 border-gray-200 hover:border-blue-500 px-6 py-4 rounded-2xl text-lg font-medium text-gray-700 hover:text-blue-700 hover:bg-white transition-all duration-200"
+              >
+                <LogIn size={20} />
+                Join {joinType === "ai" ? "AI" : "Doctor"} Room
+              </button>
             </div>
           </div>
         </div>
+
+        {/* RIGHT – Feature Cards 2x2 Grid */}
+        {/* Features Section */}
+<div className="px-4 py-2">
+  <div className="grid grid-cols-2 grid-rows-2 gap-x-34 gap-y-16 max-w-2xl mx-auto lg:mx-0">
+    {features.map((f, i) => (
+      <div
+        key={i}
+        className="flex flex-col justify-between bg-white/70 backdrop-blur-xl border border-gray-100 rounded-2xl p-6 shadow-md hover:shadow-xl transition-transform duration-300 hover:scale-[1.04] text-center min-w-[260px]"
+        style={{ height: "260px" }}
+      >
+        <div>
+          <div className="w-12 h-12 mx-auto bg-gradient-to-r from-blue-600 to-violet-600 rounded-xl flex items-center justify-center mb-4 shadow-md">
+            <f.icon size={22} className="text-white" />
+          </div>
+          <h4 className="font-semibold text-lg text-gray-900 mb-2 whitespace-nowrap text-ellipsis overflow-hidden">
+            {f.title}
+          </h4>
+          <p className="text-sm text-gray-600 leading-snug h-[80px] overflow-hidden">
+            {f.description}
+          </p>
+        </div>
+        <div className="mt-4 w-16 h-1 bg-gradient-to-r from-blue-500 to-violet-500 mx-auto rounded-full"></div>
+      </div>
+    ))}
+  </div>
+</div>
+
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-20 py-8">
+      <footer className="bg-gradient-to-r from-blue-600 via-violet-600 to-teal-500 text-white py-8">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <Stethoscope size={16} className="text-white" />
             </div>
-            <span className="text-gray-600 text-sm">© 2025 Nirogya Telemedicine Platform</span>
+            <span className="text-sm tracking-wide">
+              © 2025 Nirogya Agentic AI Healthcare
+            </span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-gray-600">
-            <a href="#" className="hover:text-blue-600">Privacy Policy</a>
-            <a href="#" className="hover:text-blue-600">Terms of Service</a>
-            <a href="#" className="hover:text-blue-600">Support</a>
+          <div className="flex items-center gap-6 text-sm">
+            <a href="#" className="hover:underline">
+              Privacy Policy
+            </a>
+            <a href="#" className="hover:underline">
+              Terms of Service
+            </a>
+            <a href="#" className="hover:underline">
+              Support
+            </a>
           </div>
         </div>
       </footer>
