@@ -11,6 +11,7 @@ function App() {
      <Routes>
       <Route path='/' element={<LandingPage/>}/>
       <Route path='/room/:roomId' element={<Room/>}/>
+      <Route path='/room/onlyai/:roomId' element={<Room/>}/>
      </Routes>
     </>
   )
