@@ -223,7 +223,7 @@ export default function LandingPage() {
                             Trusted by Healthcare Professionals
                         </h2>
                         <p className="text-xl text-blue-100">
-                            Join thousands of doctors providing quality care through our secure platform
+                            Join thousands of doctors providing quality care through our secure and fast platform
                         </p>
                         <div className="flex flex-wrap justify-center items-center gap-8 pt-8">
                             <div className="text-center">
